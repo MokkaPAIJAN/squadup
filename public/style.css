@@ -219,7 +219,10 @@ html, body {
 .brand {
   font-weight: 700;
   font-size: 18px;
+  cursor: pointer;
 }
+
+.brand:hover { color: var(--accent-strong); }
 
 .status {
   color: var(--muted);

@@ -7,6 +7,7 @@ const modeButtons = document.querySelectorAll('.mode-btn');
 const welcomeName = document.getElementById('welcome-name');
 const changeNameBtn = document.getElementById('change-name-btn');
 const backBtn = document.getElementById('back-btn');
+const brandBtn = document.getElementById('brand-btn');
 
 const statusEl = document.getElementById('status');
 const videoPane = document.getElementById('video-pane');
@@ -59,18 +60,52 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
-// ---- Restore name from this browser session (cleared when tab/browser closes) ----
-function goToModeScreen() {
-  welcomeName.textContent = `Hi, ${myName}`;
+// ---- Screen navigation using browser History API ----
+// This makes the browser's own back/forward buttons work the same way
+// as our in-app "Back" button.
+
+function showScreen(screen) {
   entryScreen.classList.add('hidden');
+  modeScreen.classList.add('hidden');
   chatScreen.classList.add('hidden');
-  modeScreen.classList.remove('hidden');
+
+  if (screen === 'entry') {
+    entryScreen.classList.remove('hidden');
+  } else if (screen === 'mode') {
+    welcomeName.textContent = `Hi, ${myName}`;
+    modeScreen.classList.remove('hidden');
+  } else if (screen === 'chat') {
+    chatScreen.classList.remove('hidden');
+  }
 }
 
+function goToModeScreen(pushHistory = true) {
+  if (pushHistory) {
+    history.pushState({ screen: 'mode' }, '', '#mode');
+  }
+  showScreen('mode');
+}
+
+window.addEventListener('popstate', (event) => {
+  const screen = (event.state && event.state.screen) || 'entry';
+
+  if (screen !== 'chat') {
+    // Leaving the chat screen (whether via browser back or app back) should
+    // disconnect cleanly: stop camera/mic, close the peer connection, etc.
+    leaveCurrentChat();
+  }
+
+  showScreen(screen);
+});
+
+// Set up the very first history entry so back/forward has something to work with
 const savedName = sessionStorage.getItem(NAME_KEY);
 if (savedName) {
   myName = savedName;
-  goToModeScreen();
+  history.replaceState({ screen: 'mode' }, '', '#mode');
+  showScreen('mode');
+} else {
+  history.replaceState({ screen: 'entry' }, '', '#entry');
 }
 
 // ---- Step 1: username ----
@@ -87,8 +122,8 @@ usernameInput.addEventListener('keydown', (e) => {
 changeNameBtn.addEventListener('click', () => {
   sessionStorage.removeItem(NAME_KEY);
   usernameInput.value = '';
-  modeScreen.classList.add('hidden');
-  entryScreen.classList.remove('hidden');
+  history.pushState({ screen: 'entry' }, '', '#entry');
+  showScreen('entry');
 });
 
 // ---- Step 2: mode selection ----
@@ -123,8 +158,8 @@ async function startChat(mode) {
     }
   }
 
-  modeScreen.classList.add('hidden');
-  chatScreen.classList.remove('hidden');
+  history.pushState({ screen: 'chat', mode }, '', '#chat');
+  showScreen('chat');
 
   socket = io();
   wireSocketEvents();
@@ -258,6 +293,10 @@ function leaveCurrentChat() {
 }
 
 backBtn.addEventListener('click', () => {
+  history.back();
+});
+
+brandBtn.addEventListener('click', () => {
   leaveCurrentChat();
   goToModeScreen();
 });
