@@ -354,6 +354,11 @@ html, body {
 
 /* Phones and small tablets */
 @media (max-width: 720px) {
+  #chat-screen {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   .entry-card, .mode-card {
     padding: 32px 24px;
   }
@@ -365,7 +370,7 @@ html, body {
   .topbar {
     flex-wrap: wrap;
     gap: 10px;
-    padding: 10px 14px;
+    padding: 16px 14px 14px;
   }
 
   .status {
@@ -414,11 +419,15 @@ html, body {
   }
 
   .chat-log {
-    padding: 12px;
+    padding: 20px 16px;
+  }
+
+  .chat-form {
+    padding: 10px 4px calc(10px + env(safe-area-inset-bottom, 0px));
   }
 
   .chat-form input {
-    padding: 12px;
+    padding: 14px;
     font-size: 16px; /* prevents auto-zoom on iOS when tapping the input */
   }
 
