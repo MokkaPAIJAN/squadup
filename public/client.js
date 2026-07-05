@@ -4,6 +4,9 @@ const chatScreen = document.getElementById('chat-screen');
 const usernameInput = document.getElementById('username-input');
 const continueBtn = document.getElementById('continue-btn');
 const modeButtons = document.querySelectorAll('.mode-btn');
+const welcomeName = document.getElementById('welcome-name');
+const changeNameBtn = document.getElementById('change-name-btn');
+const backBtn = document.getElementById('back-btn');
 
 const statusEl = document.getElementById('status');
 const videoPane = document.getElementById('video-pane');
@@ -16,7 +19,6 @@ const voiceLabel = document.getElementById('voice-label');
 const nextBtn = document.getElementById('next-btn');
 const toggleCamBtn = document.getElementById('toggle-cam-btn');
 const toggleMicBtn = document.getElementById('toggle-mic-btn');
-const chatPane = document.getElementById('chat-pane');
 const chatLog = document.getElementById('chat-log');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
@@ -27,6 +29,8 @@ const ICE_SERVERS = {
     { urls: 'stun:stun1.l.google.com:19302' },
   ],
 };
+
+const NAME_KEY = 'squadup_username';
 
 let socket = null;
 let localStream = null;
@@ -55,15 +59,36 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
+// ---- Restore name from this browser session (cleared when tab/browser closes) ----
+function goToModeScreen() {
+  welcomeName.textContent = `Hi, ${myName}`;
+  entryScreen.classList.add('hidden');
+  chatScreen.classList.add('hidden');
+  modeScreen.classList.remove('hidden');
+}
+
+const savedName = sessionStorage.getItem(NAME_KEY);
+if (savedName) {
+  myName = savedName;
+  goToModeScreen();
+}
+
 // ---- Step 1: username ----
 continueBtn.addEventListener('click', () => {
   myName = usernameInput.value.trim() || 'Stranger';
-  entryScreen.classList.add('hidden');
-  modeScreen.classList.remove('hidden');
+  sessionStorage.setItem(NAME_KEY, myName);
+  goToModeScreen();
 });
 
 usernameInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') continueBtn.click();
+});
+
+changeNameBtn.addEventListener('click', () => {
+  sessionStorage.removeItem(NAME_KEY);
+  usernameInput.value = '';
+  modeScreen.classList.add('hidden');
+  entryScreen.classList.remove('hidden');
 });
 
 // ---- Step 2: mode selection ----
@@ -213,6 +238,29 @@ function teardownPeerConnection() {
   const audioEl = document.getElementById('remote-audio');
   if (audioEl) audioEl.srcObject = null;
 }
+
+// Fully leave the current chat: stop media, disconnect socket, clear chat log
+function leaveCurrentChat() {
+  teardownPeerConnection();
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+  if (localStream) {
+    localStream.getTracks().forEach((t) => t.stop());
+    localStream = null;
+  }
+  chatLog.innerHTML = '';
+  remoteVideo.srcObject = null;
+  localVideo.srcObject = null;
+  camOn = true;
+  micOn = true;
+}
+
+backBtn.addEventListener('click', () => {
+  leaveCurrentChat();
+  goToModeScreen();
+});
 
 nextBtn.addEventListener('click', () => {
   chatLog.innerHTML = '';
