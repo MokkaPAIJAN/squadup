@@ -23,6 +23,7 @@
   <div id="mode-screen" class="screen hidden">
     <div class="entry-card mode-card">
       <h1>SquadUp<span class="dot">.</span></h1>
+      <p id="welcome-name" class="welcome-name">Hi, Player</p>
       <p class="tagline">How do you want to chat?</p>
       <button class="mode-btn" data-mode="video">
         <span class="mode-icon">🎥</span>
@@ -37,12 +38,14 @@
         <span>Text Chat</span>
       </button>
       <p class="hint">You'll only be matched with others in the same mode.</p>
+      <button id="change-name-btn" class="link-btn">Not you? Change name</button>
     </div>
   </div>
 
   <!-- Step 3: Chat screen -->
   <div id="chat-screen" class="screen hidden">
     <header class="topbar">
+      <button id="back-btn" class="back-btn" title="Change chat mode">← Back</button>
       <div class="brand">SquadUp<span class="dot">.</span></div>
       <div id="status" class="status">Connecting…</div>
       <div class="controls">
