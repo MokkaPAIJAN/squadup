@@ -45,6 +45,7 @@ html, body {
   border-radius: 16px;
   padding: 48px 40px;
   width: 380px;
+  max-width: 90vw;
   text-align: center;
   box-shadow: 0 20px 60px rgba(0,0,0,0.4);
 }
@@ -110,7 +111,7 @@ html, body {
     var(--bg);
 }
 
-.mode-card { width: 340px; }
+.mode-card { width: 340px; max-width: 90vw; }
 
 .welcome-name {
   font-size: 15px;
@@ -342,7 +343,103 @@ html, body {
   cursor: pointer;
 }
 
+/* ============================================
+   RESPONSIVE: tablets and phones
+   ============================================ */
+
+/* Tablets and small laptops */
+@media (max-width: 900px) {
+  .video-pane { flex: 1.4; }
+}
+
+/* Phones and small tablets */
 @media (max-width: 720px) {
-  .stage { flex-direction: column; }
-  .chat-pane { max-width: none; border-left: none; border-top: 1px solid var(--line); }
+  .entry-card, .mode-card {
+    padding: 32px 24px;
+  }
+
+  .entry-card h1 {
+    font-size: 28px;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+
+  .status {
+    order: 3;
+    flex-basis: 100%;
+    font-size: 12px;
+  }
+
+  .back-btn, .brand, .controls button {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .stage {
+    flex-direction: column;
+  }
+
+  .video-pane {
+    flex: none;
+    height: 45vh;
+  }
+
+  .voice-pane {
+    flex: none;
+    height: 35vh;
+  }
+
+  .voice-avatar {
+    width: 100px;
+    height: 100px;
+    font-size: 42px;
+  }
+
+  .local-preview {
+    width: 110px;
+    height: 74px;
+    bottom: 10px;
+    right: 10px;
+  }
+
+  .chat-pane {
+    max-width: none;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    flex: 1;
+  }
+
+  .chat-log {
+    padding: 12px;
+  }
+
+  .chat-form input {
+    padding: 12px;
+    font-size: 16px; /* prevents auto-zoom on iOS when tapping the input */
+  }
+
+  .mode-btn {
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+}
+
+/* Very small phones */
+@media (max-width: 380px) {
+  .entry-card, .mode-card {
+    padding: 24px 18px;
+  }
+
+  .entry-card h1 {
+    font-size: 24px;
+  }
+
+  .local-preview {
+    width: 90px;
+    height: 60px;
+  }
 }
