@@ -1,15 +1,22 @@
 const entryScreen = document.getElementById('entry-screen');
+const modeScreen = document.getElementById('mode-screen');
 const chatScreen = document.getElementById('chat-screen');
 const usernameInput = document.getElementById('username-input');
-const startBtn = document.getElementById('start-btn');
+const continueBtn = document.getElementById('continue-btn');
+const modeButtons = document.querySelectorAll('.mode-btn');
 
 const statusEl = document.getElementById('status');
+const videoPane = document.getElementById('video-pane');
+const voicePane = document.getElementById('voice-pane');
 const remoteVideo = document.getElementById('remote-video');
 const remoteLabel = document.getElementById('remote-label');
 const localVideo = document.getElementById('local-video');
+const voiceAvatar = document.getElementById('voice-avatar');
+const voiceLabel = document.getElementById('voice-label');
 const nextBtn = document.getElementById('next-btn');
 const toggleCamBtn = document.getElementById('toggle-cam-btn');
 const toggleMicBtn = document.getElementById('toggle-mic-btn');
+const chatPane = document.getElementById('chat-pane');
 const chatLog = document.getElementById('chat-log');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
@@ -28,6 +35,7 @@ let myName = 'Stranger';
 let partnerName = 'Stranger';
 let camOn = true;
 let micOn = true;
+let currentMode = 'text'; // 'video' | 'voice' | 'text'
 
 function addChatMessage(text, who, kind) {
   const div = document.createElement('div');
@@ -47,41 +55,73 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
-async function start() {
+// ---- Step 1: username ----
+continueBtn.addEventListener('click', () => {
   myName = usernameInput.value.trim() || 'Stranger';
-
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  } catch (err) {
-    alert('Camera/mic access is needed for video chat. You can still use text chat, but please allow access for the full experience.');
-    localStream = null;
-  }
-
-  if (localStream) {
-    localVideo.srcObject = localStream;
-  }
-
   entryScreen.classList.add('hidden');
+  modeScreen.classList.remove('hidden');
+});
+
+usernameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') continueBtn.click();
+});
+
+// ---- Step 2: mode selection ----
+modeButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    currentMode = btn.dataset.mode;
+    startChat(currentMode);
+  });
+});
+
+async function startChat(mode) {
+  // Show/hide panes based on mode
+  videoPane.classList.toggle('hidden', mode !== 'video');
+  voicePane.classList.toggle('hidden', mode !== 'voice');
+  toggleCamBtn.classList.toggle('hidden', mode !== 'video');
+  toggleMicBtn.classList.toggle('hidden', mode === 'text');
+
+  const needsMedia = mode === 'video' || mode === 'voice';
+
+  if (needsMedia) {
+    try {
+      const constraints = mode === 'video'
+        ? { video: true, audio: true }
+        : { video: false, audio: true };
+      localStream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err) {
+      alert('Camera/mic access is needed for this mode. You can still use text chat instead.');
+      localStream = null;
+    }
+    if (mode === 'video' && localStream) {
+      localVideo.srcObject = localStream;
+    }
+  }
+
+  modeScreen.classList.add('hidden');
   chatScreen.classList.remove('hidden');
 
   socket = io();
   wireSocketEvents();
-  socket.emit('set-username', myName);
+  socket.emit('set-username', { name: myName, mode });
 }
 
 function wireSocketEvents() {
   socket.on('waiting', () => {
     statusEl.textContent = 'Looking for a teammate…';
-    remoteLabel.textContent = 'Waiting for someone…';
+    setWaitingLabel('Waiting for someone…');
     remoteVideo.srcObject = null;
   });
 
   socket.on('matched', ({ partnerName: pName, initiator }) => {
     partnerName = pName;
     statusEl.textContent = `Connected with ${partnerName}`;
-    remoteLabel.textContent = partnerName;
+    setWaitingLabel(partnerName);
     addChatMessage(`You matched with ${partnerName}.`, null, 'system');
-    setupPeerConnection(initiator);
+
+    if (currentMode === 'video' || currentMode === 'voice') {
+      setupPeerConnection(initiator);
+    }
   });
 
   socket.on('signal', async (data) => {
@@ -105,7 +145,7 @@ function wireSocketEvents() {
   socket.on('partner-left', () => {
     addChatMessage(`${partnerName} left the chat.`, null, 'system');
     statusEl.textContent = 'Looking for a teammate…';
-    remoteLabel.textContent = 'Waiting for someone…';
+    setWaitingLabel('Waiting for someone…');
     remoteVideo.srcObject = null;
     teardownPeerConnection();
   });
@@ -113,6 +153,11 @@ function wireSocketEvents() {
   socket.on('chat-message', ({ text, from }) => {
     addChatMessage(text, from);
   });
+}
+
+function setWaitingLabel(text) {
+  remoteLabel.textContent = text;
+  voiceLabel.textContent = text;
 }
 
 function setupPeerConnection(initiator) {
@@ -124,7 +169,20 @@ function setupPeerConnection(initiator) {
   }
 
   pc.ontrack = (event) => {
-    remoteVideo.srcObject = event.streams[0];
+    if (currentMode === 'video') {
+      remoteVideo.srcObject = event.streams[0];
+    } else {
+      // Voice mode: play remote audio via a hidden audio element
+      let audioEl = document.getElementById('remote-audio');
+      if (!audioEl) {
+        audioEl = document.createElement('audio');
+        audioEl.id = 'remote-audio';
+        audioEl.autoplay = true;
+        document.body.appendChild(audioEl);
+      }
+      audioEl.srcObject = event.streams[0];
+      voiceAvatar.classList.add('talking');
+    }
   };
 
   pc.onicecandidate = (event) => {
@@ -151,6 +209,9 @@ function teardownPeerConnection() {
     pc.close();
     pc = null;
   }
+  voiceAvatar.classList.remove('talking');
+  const audioEl = document.getElementById('remote-audio');
+  if (audioEl) audioEl.srcObject = null;
 }
 
 nextBtn.addEventListener('click', () => {
@@ -179,9 +240,4 @@ chatForm.addEventListener('submit', (e) => {
   socket.emit('chat-message', text);
   addChatMessage(text, myName, 'me');
   chatInput.value = '';
-});
-
-startBtn.addEventListener('click', start);
-usernameInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') start();
 });
