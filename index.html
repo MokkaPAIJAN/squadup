@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SquadUp — Random Gamer Chat</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Step 1: Username entry -->
+  <div id="entry-screen" class="screen">
+    <div class="entry-card">
+      <h1>SquadUp<span class="dot">.</span></h1>
+      <p class="tagline">Find your next teammate. No account needed.</p>
+      <input id="username-input" type="text" placeholder="Pick a name" maxlength="24" autocomplete="off" />
+      <button id="continue-btn">Continue</button>
+      <p class="hint">Guest mode — jump straight in.</p>
+    </div>
+  </div>
+
+  <!-- Step 2: Mode selection -->
+  <div id="mode-screen" class="screen hidden">
+    <div class="entry-card mode-card">
+      <h1>SquadUp<span class="dot">.</span></h1>
+      <p class="tagline">How do you want to chat?</p>
+      <button class="mode-btn" data-mode="video">
+        <span class="mode-icon">🎥</span>
+        <span>Video Chat</span>
+      </button>
+      <button class="mode-btn" data-mode="voice">
+        <span class="mode-icon">🎙️</span>
+        <span>Voice Chat</span>
+      </button>
+      <button class="mode-btn" data-mode="text">
+        <span class="mode-icon">💬</span>
+        <span>Text Chat</span>
+      </button>
+      <p class="hint">You'll only be matched with others in the same mode.</p>
+    </div>
+  </div>
+
+  <!-- Step 3: Chat screen -->
+  <div id="chat-screen" class="screen hidden">
+    <header class="topbar">
+      <div class="brand">SquadUp<span class="dot">.</span></div>
+      <div id="status" class="status">Connecting…</div>
+      <div class="controls">
+        <button id="toggle-cam-btn" title="Toggle camera" class="hidden">Cam: On</button>
+        <button id="toggle-mic-btn" title="Toggle mic" class="hidden">Mic: On</button>
+        <button id="next-btn" class="next-btn">Next ⏭</button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <div id="video-pane" class="video-pane hidden">
+        <video id="remote-video" autoplay playsinline></video>
+        <div id="remote-label" class="video-label">Waiting for someone…</div>
+        <video id="local-video" autoplay playsinline muted class="local-preview"></video>
+      </div>
+
+      <div id="voice-pane" class="voice-pane hidden">
+        <div class="voice-avatar" id="voice-avatar">🎙️</div>
+        <div id="voice-label" class="voice-label">Waiting for someone…</div>
+      </div>
+
+      <aside id="chat-pane" class="chat-pane">
+        <div id="chat-log" class="chat-log"></div>
+        <form id="chat-form" class="chat-form">
+          <input id="chat-input" type="text" placeholder="Say something…" autocomplete="off" maxlength="500" />
+          <button type="submit">Send</button>
+        </form>
+      </aside>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
