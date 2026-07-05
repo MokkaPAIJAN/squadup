@@ -1,0 +1,14 @@
+{
+  "name": "randomchat",
+  "version": "1.0.0",
+  "description": "Random video/voice/text chat for gamers to find teammates",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "license": "ISC"
+}
