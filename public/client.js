@@ -90,15 +90,12 @@ window.addEventListener('popstate', (event) => {
   const screen = (event.state && event.state.screen) || 'entry';
 
   if (screen !== 'chat') {
-    // Leaving the chat screen (whether via browser back or app back) should
-    // disconnect cleanly: stop camera/mic, close the peer connection, etc.
     leaveCurrentChat();
   }
 
   showScreen(screen);
 });
 
-// Set up the very first history entry so back/forward has something to work with
 const savedName = sessionStorage.getItem(NAME_KEY);
 if (savedName) {
   myName = savedName;
@@ -135,7 +132,6 @@ modeButtons.forEach((btn) => {
 });
 
 async function startChat(mode) {
-  // Show/hide panes based on mode
   videoPane.classList.toggle('hidden', mode !== 'video');
   voicePane.classList.toggle('hidden', mode !== 'voice');
   toggleCamBtn.classList.toggle('hidden', mode !== 'video');
@@ -232,7 +228,6 @@ function setupPeerConnection(initiator) {
     if (currentMode === 'video') {
       remoteVideo.srcObject = event.streams[0];
     } else {
-      // Voice mode: play remote audio via a hidden audio element
       let audioEl = document.getElementById('remote-audio');
       if (!audioEl) {
         audioEl = document.createElement('audio');
@@ -274,7 +269,6 @@ function teardownPeerConnection() {
   if (audioEl) audioEl.srcObject = null;
 }
 
-// Fully leave the current chat: stop media, disconnect socket, clear chat log
 function leaveCurrentChat() {
   teardownPeerConnection();
   if (socket) {
