@@ -9,6 +9,37 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+const METERED_DOMAIN = 'squadup.metered.live';
+const METERED_SECRET_KEY = process.env.METERED_SECRET_KEY;
+
+// The browser calls this to get short-lived TURN credentials.
+// The secret key itself stays on the server and is never sent to the browser.
+app.get('/api/turn-credentials', async (req, res) => {
+  try {
+    if (!METERED_SECRET_KEY) {
+      throw new Error('METERED_SECRET_KEY is not set on the server');
+    }
+    const response = await fetch(
+      `https://${METERED_DOMAIN}/api/v1/turn/credentials?apiKey=${METERED_SECRET_KEY}`
+    );
+    if (!response.ok) {
+      throw new Error(`Metered API responded with ${response.status}`);
+    }
+    const iceServers = await response.json();
+    res.json({ iceServers });
+  } catch (err) {
+    console.error('Failed to fetch TURN credentials:', err.message);
+    // Fall back to public STUN-only servers so the app doesn't crash;
+    // direct connections on the same network will still work.
+    res.json({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+      ],
+    });
+  }
+});
+
 const VALID_MODES = ['video', 'voice', 'text'];
 
 // One waiting queue PER mode, so people only match with others in the same mode
@@ -47,6 +78,7 @@ function tryMatch(socket) {
       partners[socket.id] = partnerId;
       partners[partnerId] = socket.id;
 
+      // socket.id will be the "initiator" who creates the WebRTC offer (video/voice only)
       socket.emit('matched', {
         partnerName: usernames[partnerId] || 'Stranger',
         initiator: true,
@@ -61,6 +93,7 @@ function tryMatch(socket) {
     }
   }
 
+  // No one available in this mode yet, wait
   queue.push(socket.id);
   socket.emit('waiting', { mode });
 }
@@ -73,6 +106,7 @@ io.on('connection', (socket) => {
     tryMatch(socket);
   });
 
+  // Relay WebRTC signaling data to whichever partner this socket has
   socket.on('signal', (data) => {
     const partnerId = partners[socket.id];
     if (partnerId) {
@@ -80,6 +114,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Relay text chat messages
   socket.on('chat-message', (msg) => {
     const partnerId = partners[socket.id];
     if (partnerId) {
@@ -90,6 +125,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // User clicks "Next" to skip current partner and find someone new (same mode)
   socket.on('next', () => {
     const partnerId = partners[socket.id];
     if (partnerId) {
