@@ -24,29 +24,27 @@ const chatLog = document.getElementById('chat-log');
 const chatForm = document.getElementById('chat-form');
 const chatInput = document.getElementById('chat-input');
 
-const ICE_SERVERS = {
+// ICE servers are fetched from our own server (which holds the secret key),
+// rather than hardcoded here. Falls back to STUN-only if the fetch fails.
+let ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    // TURN servers relay video/voice when a direct connection fails
-    // (e.g. one person on WiFi, the other on mobile data)
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
   ],
 };
+
+async function loadIceServers() {
+  try {
+    const res = await fetch('/api/turn-credentials');
+    const data = await res.json();
+    if (data && Array.isArray(data.iceServers) && data.iceServers.length > 0) {
+      ICE_SERVERS = { iceServers: data.iceServers };
+    }
+  } catch (e) {
+    console.error('Could not load TURN credentials, using STUN-only fallback', e);
+  }
+}
+let iceServersReady = loadIceServers();
 
 const NAME_KEY = 'squadup_username';
 
@@ -183,6 +181,25 @@ async function startChat(mode) {
   socket.emit('set-username', { name: myName, mode });
 }
 
+let pendingSignals = [];
+
+async function handleSignal(data) {
+  try {
+    if (data.type === 'offer') {
+      await pc.setRemoteDescription(new RTCSessionDescription(data));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      socket.emit('signal', answer);
+    } else if (data.type === 'answer') {
+      await pc.setRemoteDescription(new RTCSessionDescription(data));
+    } else if (data.candidate) {
+      await pc.addIceCandidate(new RTCIceCandidate(data));
+    }
+  } catch (e) {
+    console.error('Signal handling error', e);
+  }
+}
+
 function wireSocketEvents() {
   socket.on('waiting', () => {
     statusEl.textContent = 'Looking for a teammate…';
@@ -190,33 +207,23 @@ function wireSocketEvents() {
     remoteVideo.srcObject = null;
   });
 
-  socket.on('matched', ({ partnerName: pName, initiator }) => {
+  socket.on('matched', async ({ partnerName: pName, initiator }) => {
     partnerName = pName;
     statusEl.textContent = `Connected with ${partnerName}`;
     setWaitingLabel(partnerName);
     addChatMessage(`You matched with ${partnerName}.`, null, 'system');
 
     if (currentMode === 'video' || currentMode === 'voice') {
-      setupPeerConnection(initiator);
+      await setupPeerConnection(initiator);
     }
   });
 
   socket.on('signal', async (data) => {
-    if (!pc) return;
-    try {
-      if (data.type === 'offer') {
-        await pc.setRemoteDescription(new RTCSessionDescription(data));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        socket.emit('signal', answer);
-      } else if (data.type === 'answer') {
-        await pc.setRemoteDescription(new RTCSessionDescription(data));
-      } else if (data.candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(data));
-      }
-    } catch (e) {
-      console.error('Signal handling error', e);
+    if (!pc) {
+      pendingSignals.push(data);
+      return;
     }
+    await handleSignal(data);
   });
 
   socket.on('partner-left', () => {
@@ -237,9 +244,17 @@ function setWaitingLabel(text) {
   voiceLabel.textContent = text;
 }
 
-function setupPeerConnection(initiator) {
+async function setupPeerConnection(initiator) {
   teardownPeerConnection();
+  await iceServersReady;
   pc = new RTCPeerConnection(ICE_SERVERS);
+
+  // Process any signal messages that arrived while we were still setting up
+  const queued = pendingSignals;
+  pendingSignals = [];
+  for (const data of queued) {
+    await handleSignal(data);
+  }
 
   if (localStream) {
     localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
@@ -286,6 +301,7 @@ function teardownPeerConnection() {
     pc.close();
     pc = null;
   }
+  pendingSignals = [];
   voiceAvatar.classList.remove('talking');
   const audioEl = document.getElementById('remote-audio');
   if (audioEl) audioEl.srcObject = null;
