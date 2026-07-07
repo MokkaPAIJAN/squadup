@@ -57,6 +57,42 @@ let camOn = true;
 let micOn = true;
 let currentMode = 'text'; // 'video' | 'voice' | 'text'
 
+// Boosts the incoming voice/video audio above the device's normal max volume.
+// Created during the mode-button click (a user gesture) so mobile browsers
+// allow audio playback right away.
+const VOLUME_BOOST = 2.5; // 2.5x louder than normal
+let audioCtx = null;
+let gainNode = null;
+let audioSourceNode = null;
+
+function ensureAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = VOLUME_BOOST;
+    gainNode.connect(audioCtx.destination);
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function playBoostedAudio(stream) {
+  ensureAudioContext();
+  if (audioSourceNode) {
+    audioSourceNode.disconnect();
+  }
+  audioSourceNode = audioCtx.createMediaStreamSource(stream);
+  audioSourceNode.connect(gainNode);
+}
+
+function stopBoostedAudio() {
+  if (audioSourceNode) {
+    audioSourceNode.disconnect();
+    audioSourceNode = null;
+  }
+}
+
 function addChatMessage(text, who, kind) {
   const div = document.createElement('div');
   div.className = 'chat-msg' + (kind ? ' ' + kind : '');
@@ -145,6 +181,9 @@ changeNameBtn.addEventListener('click', () => {
 modeButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
     currentMode = btn.dataset.mode;
+    if (currentMode === 'video' || currentMode === 'voice') {
+      ensureAudioContext();
+    }
     startChat(currentMode);
   });
 });
@@ -263,16 +302,11 @@ async function setupPeerConnection(initiator) {
   pc.ontrack = (event) => {
     if (currentMode === 'video') {
       remoteVideo.srcObject = event.streams[0];
+      remoteVideo.muted = true; // avoid double/normal-volume audio; we play boosted audio separately
+      playBoostedAudio(event.streams[0]);
     } else {
-      // Voice mode: play remote audio via a hidden audio element
-      let audioEl = document.getElementById('remote-audio');
-      if (!audioEl) {
-        audioEl = document.createElement('audio');
-        audioEl.id = 'remote-audio';
-        audioEl.autoplay = true;
-        document.body.appendChild(audioEl);
-      }
-      audioEl.srcObject = event.streams[0];
+      // Voice mode: play the remote audio through the volume-boosted path
+      playBoostedAudio(event.streams[0]);
       voiceAvatar.classList.add('talking');
     }
   };
@@ -303,8 +337,7 @@ function teardownPeerConnection() {
   }
   pendingSignals = [];
   voiceAvatar.classList.remove('talking');
-  const audioEl = document.getElementById('remote-audio');
-  if (audioEl) audioEl.srcObject = null;
+  stopBoostedAudio();
 }
 
 // Fully leave the current chat: stop media, disconnect socket, clear chat log
