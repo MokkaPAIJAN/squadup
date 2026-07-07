@@ -29,7 +29,7 @@ html, body {
 }
 
 /* ---- Entry screen ---- */
-#entry-screen {
+#entry-screen, #login-screen, #signup-screen, #profile-screen {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -64,7 +64,10 @@ html, body {
   font-size: 14px;
 }
 
-#username-input {
+#username-input,
+#login-email, #login-password,
+#signup-username, #signup-email, #signup-password,
+#profile-bio, #profile-games {
   width: 100%;
   padding: 14px 16px;
   border-radius: 10px;
@@ -74,13 +77,18 @@ html, body {
   font-size: 15px;
   margin-bottom: 14px;
   outline: none;
+  font-family: inherit;
+  resize: vertical;
 }
 
-#username-input:focus {
+#username-input:focus,
+#login-email:focus, #login-password:focus,
+#signup-username:focus, #signup-email:focus, #signup-password:focus,
+#profile-bio:focus, #profile-games:focus {
   border-color: var(--accent-strong);
 }
 
-#start-btn {
+#continue-btn, #login-submit-btn, #signup-submit-btn, #profile-save-btn {
   width: 100%;
   padding: 14px;
   border-radius: 10px;
@@ -92,7 +100,32 @@ html, body {
   cursor: pointer;
 }
 
-#start-btn:hover { filter: brightness(1.08); }
+#continue-btn:hover, #login-submit-btn:hover, #signup-submit-btn:hover, #profile-save-btn:hover {
+  filter: brightness(1.08);
+}
+
+.auth-links {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-sep {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+
+.logout-link {
+  color: var(--danger) !important;
+}
 
 .hint {
   color: var(--muted);

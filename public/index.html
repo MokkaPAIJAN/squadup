@@ -14,8 +14,61 @@
       <h1>SquadUp<span class="dot">.</span></h1>
       <p class="tagline">Find your next teammate. No account needed.</p>
       <input id="username-input" type="text" placeholder="Pick a name" maxlength="24" autocomplete="off" />
-      <button id="continue-btn">Continue</button>
+      <button id="continue-btn">Continue as Guest</button>
       <p class="hint">Guest mode — jump straight in.</p>
+      <div class="auth-links">
+        <button id="show-login-btn" class="link-btn">Log in</button>
+        <span class="auth-sep">·</span>
+        <button id="show-signup-btn" class="link-btn">Sign up</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login screen -->
+  <div id="login-screen" class="screen hidden">
+    <div class="entry-card">
+      <h1>SquadUp<span class="dot">.</span></h1>
+      <p class="tagline">Log in to your account</p>
+      <p id="login-error" class="form-error hidden"></p>
+      <input id="login-email" type="email" placeholder="Email" autocomplete="email" />
+      <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" />
+      <button id="login-submit-btn">Log In</button>
+      <p class="hint">
+        <button id="login-to-signup-btn" class="link-btn">Need an account? Sign up</button>
+      </p>
+      <button id="login-back-btn" class="link-btn">Back</button>
+    </div>
+  </div>
+
+  <!-- Signup screen -->
+  <div id="signup-screen" class="screen hidden">
+    <div class="entry-card">
+      <h1>SquadUp<span class="dot">.</span></h1>
+      <p class="tagline">Create your account</p>
+      <p id="signup-error" class="form-error hidden"></p>
+      <input id="signup-username" type="text" placeholder="Username" maxlength="24" autocomplete="username" />
+      <input id="signup-email" type="email" placeholder="Email" autocomplete="email" />
+      <input id="signup-password" type="password" placeholder="Password (6+ characters)" autocomplete="new-password" />
+      <button id="signup-submit-btn">Sign Up</button>
+      <p class="hint">
+        <button id="signup-to-login-btn" class="link-btn">Already have an account? Log in</button>
+      </p>
+      <button id="signup-back-btn" class="link-btn">Back</button>
+    </div>
+  </div>
+
+  <!-- Profile screen -->
+  <div id="profile-screen" class="screen hidden">
+    <div class="entry-card mode-card">
+      <h1>SquadUp<span class="dot">.</span></h1>
+      <p class="tagline">Your profile</p>
+      <p id="profile-username" class="welcome-name">Username</p>
+      <textarea id="profile-bio" placeholder="Add a short bio…" maxlength="200" rows="3"></textarea>
+      <input id="profile-games" type="text" placeholder="Favorite games, comma separated" maxlength="200" />
+      <button id="profile-save-btn">Save Profile</button>
+      <p id="profile-saved-msg" class="hint hidden">Saved!</p>
+      <button id="profile-back-btn" class="link-btn">Back to menu</button>
+      <button id="logout-btn" class="link-btn logout-link">Log out</button>
     </div>
   </div>
 
@@ -39,6 +92,7 @@
       </button>
       <p class="hint">You'll only be matched with others in the same mode.</p>
       <button id="change-name-btn" class="link-btn">Not you? Change name</button>
+      <button id="view-profile-btn" class="link-btn hidden">My Profile</button>
     </div>
   </div>
 

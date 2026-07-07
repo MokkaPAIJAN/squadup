@@ -1,6 +1,10 @@
 const entryScreen = document.getElementById('entry-screen');
 const modeScreen = document.getElementById('mode-screen');
 const chatScreen = document.getElementById('chat-screen');
+const loginScreen = document.getElementById('login-screen');
+const signupScreen = document.getElementById('signup-screen');
+const profileScreen = document.getElementById('profile-screen');
+
 const usernameInput = document.getElementById('username-input');
 const continueBtn = document.getElementById('continue-btn');
 const modeButtons = document.querySelectorAll('.mode-btn');
@@ -8,6 +12,32 @@ const welcomeName = document.getElementById('welcome-name');
 const changeNameBtn = document.getElementById('change-name-btn');
 const backBtn = document.getElementById('back-btn');
 const brandBtn = document.getElementById('brand-btn');
+const viewProfileBtn = document.getElementById('view-profile-btn');
+
+const showLoginBtn = document.getElementById('show-login-btn');
+const showSignupBtn = document.getElementById('show-signup-btn');
+const loginEmailInput = document.getElementById('login-email');
+const loginPasswordInput = document.getElementById('login-password');
+const loginSubmitBtn = document.getElementById('login-submit-btn');
+const loginErrorEl = document.getElementById('login-error');
+const loginToSignupBtn = document.getElementById('login-to-signup-btn');
+const loginBackBtn = document.getElementById('login-back-btn');
+
+const signupUsernameInput = document.getElementById('signup-username');
+const signupEmailInput = document.getElementById('signup-email');
+const signupPasswordInput = document.getElementById('signup-password');
+const signupSubmitBtn = document.getElementById('signup-submit-btn');
+const signupErrorEl = document.getElementById('signup-error');
+const signupToLoginBtn = document.getElementById('signup-to-login-btn');
+const signupBackBtn = document.getElementById('signup-back-btn');
+
+const profileUsernameEl = document.getElementById('profile-username');
+const profileBioInput = document.getElementById('profile-bio');
+const profileGamesInput = document.getElementById('profile-games');
+const profileSaveBtn = document.getElementById('profile-save-btn');
+const profileSavedMsg = document.getElementById('profile-saved-msg');
+const profileBackBtn = document.getElementById('profile-back-btn');
+const logoutBtn = document.getElementById('logout-btn');
 
 const statusEl = document.getElementById('status');
 const videoPane = document.getElementById('video-pane');
@@ -56,6 +86,7 @@ let partnerName = 'Stranger';
 let camOn = true;
 let micOn = true;
 let currentMode = 'text'; // 'video' | 'voice' | 'text'
+let currentUser = null; // set when logged in via a real account (not guest)
 
 // Boosts the incoming voice/video audio above the device's normal max volume.
 // Created during the mode-button click (a user gesture) so mobile browsers
@@ -119,14 +150,27 @@ function showScreen(screen) {
   entryScreen.classList.add('hidden');
   modeScreen.classList.add('hidden');
   chatScreen.classList.add('hidden');
+  loginScreen.classList.add('hidden');
+  signupScreen.classList.add('hidden');
+  profileScreen.classList.add('hidden');
 
   if (screen === 'entry') {
     entryScreen.classList.remove('hidden');
   } else if (screen === 'mode') {
     welcomeName.textContent = `Hi, ${myName}`;
+    viewProfileBtn.classList.toggle('hidden', !currentUser);
     modeScreen.classList.remove('hidden');
   } else if (screen === 'chat') {
     chatScreen.classList.remove('hidden');
+  } else if (screen === 'login') {
+    loginScreen.classList.remove('hidden');
+  } else if (screen === 'signup') {
+    signupScreen.classList.remove('hidden');
+  } else if (screen === 'profile') {
+    profileUsernameEl.textContent = currentUser ? currentUser.username : '';
+    profileBioInput.value = currentUser ? currentUser.bio || '' : '';
+    profileGamesInput.value = currentUser && currentUser.favoriteGames ? currentUser.favoriteGames.join(', ') : '';
+    profileScreen.classList.remove('hidden');
   }
 }
 
@@ -149,15 +193,32 @@ window.addEventListener('popstate', (event) => {
   showScreen(screen);
 });
 
-// Set up the very first history entry so back/forward has something to work with
-const savedName = sessionStorage.getItem(NAME_KEY);
-if (savedName) {
-  myName = savedName;
-  history.replaceState({ screen: 'mode' }, '', '#mode');
-  showScreen('mode');
-} else {
-  history.replaceState({ screen: 'entry' }, '', '#entry');
+// ---- Startup: check for a real logged-in account first, then fall back to guest name ----
+async function checkAuthAndStart() {
+  try {
+    const res = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (data && data.user) {
+      currentUser = data.user;
+      myName = data.user.username;
+      history.replaceState({ screen: 'mode' }, '', '#mode');
+      showScreen('mode');
+      return;
+    }
+  } catch (e) {
+    // network error or server not reachable yet; fall through to guest flow
+  }
+
+  const savedName = sessionStorage.getItem(NAME_KEY);
+  if (savedName) {
+    myName = savedName;
+    history.replaceState({ screen: 'mode' }, '', '#mode');
+    showScreen('mode');
+  } else {
+    history.replaceState({ screen: 'entry' }, '', '#entry');
+  }
 }
+checkAuthAndStart();
 
 // ---- Step 1: username ----
 continueBtn.addEventListener('click', () => {
@@ -173,6 +234,160 @@ usernameInput.addEventListener('keydown', (e) => {
 changeNameBtn.addEventListener('click', () => {
   sessionStorage.removeItem(NAME_KEY);
   usernameInput.value = '';
+  history.pushState({ screen: 'entry' }, '', '#entry');
+  showScreen('entry');
+});
+
+// ---- Auth: navigation between entry/login/signup ----
+showLoginBtn.addEventListener('click', () => {
+  loginErrorEl.classList.add('hidden');
+  history.pushState({ screen: 'login' }, '', '#login');
+  showScreen('login');
+});
+
+showSignupBtn.addEventListener('click', () => {
+  signupErrorEl.classList.add('hidden');
+  history.pushState({ screen: 'signup' }, '', '#signup');
+  showScreen('signup');
+});
+
+loginToSignupBtn.addEventListener('click', () => {
+  signupErrorEl.classList.add('hidden');
+  history.pushState({ screen: 'signup' }, '', '#signup');
+  showScreen('signup');
+});
+
+signupToLoginBtn.addEventListener('click', () => {
+  loginErrorEl.classList.add('hidden');
+  history.pushState({ screen: 'login' }, '', '#login');
+  showScreen('login');
+});
+
+loginBackBtn.addEventListener('click', () => {
+  history.pushState({ screen: 'entry' }, '', '#entry');
+  showScreen('entry');
+});
+
+signupBackBtn.addEventListener('click', () => {
+  history.pushState({ screen: 'entry' }, '', '#entry');
+  showScreen('entry');
+});
+
+// ---- Auth: submit login ----
+loginSubmitBtn.addEventListener('click', async () => {
+  const email = loginEmailInput.value.trim();
+  const password = loginPasswordInput.value;
+  loginErrorEl.classList.add('hidden');
+
+  if (!email || !password) {
+    loginErrorEl.textContent = 'Please enter your email and password.';
+    loginErrorEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      loginErrorEl.textContent = data.error || 'Could not log in.';
+      loginErrorEl.classList.remove('hidden');
+      return;
+    }
+    currentUser = data.user;
+    myName = data.user.username;
+    loginEmailInput.value = '';
+    loginPasswordInput.value = '';
+    goToModeScreen();
+  } catch (e) {
+    loginErrorEl.textContent = 'Network error. Please try again.';
+    loginErrorEl.classList.remove('hidden');
+  }
+});
+
+// ---- Auth: submit signup ----
+signupSubmitBtn.addEventListener('click', async () => {
+  const username = signupUsernameInput.value.trim();
+  const email = signupEmailInput.value.trim();
+  const password = signupPasswordInput.value;
+  signupErrorEl.classList.add('hidden');
+
+  if (!username || !email || !password) {
+    signupErrorEl.textContent = 'Please fill in all fields.';
+    signupErrorEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      signupErrorEl.textContent = data.error || 'Could not create your account.';
+      signupErrorEl.classList.remove('hidden');
+      return;
+    }
+    currentUser = data.user;
+    myName = data.user.username;
+    signupUsernameInput.value = '';
+    signupEmailInput.value = '';
+    signupPasswordInput.value = '';
+    goToModeScreen();
+  } catch (e) {
+    signupErrorEl.textContent = 'Network error. Please try again.';
+    signupErrorEl.classList.remove('hidden');
+  }
+});
+
+// ---- Profile ----
+viewProfileBtn.addEventListener('click', () => {
+  history.pushState({ screen: 'profile' }, '', '#profile');
+  showScreen('profile');
+});
+
+profileBackBtn.addEventListener('click', () => {
+  history.back();
+});
+
+profileSaveBtn.addEventListener('click', async () => {
+  const bio = profileBioInput.value.trim();
+  const favoriteGames = profileGamesInput.value
+    .split(',')
+    .map((g) => g.trim())
+    .filter(Boolean);
+
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bio, favoriteGames }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentUser = data.user;
+      profileSavedMsg.classList.remove('hidden');
+      setTimeout(() => profileSavedMsg.classList.add('hidden'), 2000);
+    }
+  } catch (e) {
+    console.error('Could not save profile', e);
+  }
+});
+
+logoutBtn.addEventListener('click', async () => {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch (e) {
+    // ignore network errors on logout
+  }
+  currentUser = null;
+  myName = 'Stranger';
+  sessionStorage.removeItem(NAME_KEY);
   history.pushState({ screen: 'entry' }, '', '#entry');
   showScreen('entry');
 });
